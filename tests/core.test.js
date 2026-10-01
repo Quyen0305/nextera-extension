@@ -57,3 +57,17 @@ test('HTTP success without completed progress is reported as pending', async () 
   const result=await runCourse({scan:async()=>({items:[{id:'a',contentSummary:{typeName:'supplement'}}],progress:{elements:[{items:{}}]}}),types:new Set(['supplement']),process:async()=>{}});
   assert.equal(result.completed,0); assert.equal(result.pending,1);
 });
+
+
+test('runner waits for a short lock and processes the item after unlock', async () => {
+  let scans=0; const processed=[]; const done=new Set(); const sleeps=[];
+  const scan=async()=>{
+    scans++;
+    const locked=scans<3;
+    return {items:[{id:'a',isLocked:locked,lockedStatus:locked?'LOCKED':'UNLOCKED',contentSummary:{typeName:'supplement'}}],progress:{elements:[{items:Object.fromEntries([...done].map(id=>[id,{progressState:'Completed'}]))}]}};
+  };
+  const result=await runCourse({scan,types:new Set(['supplement']),waitForUnlockMs:35000,unlockPollMs:1000,sleep:async ms=>{sleeps.push(ms);},process:async item=>{processed.push(item.id);done.add(item.id);}});
+  assert.deepEqual(processed,['a']);
+  assert.equal(result.completed,1);
+  assert.deepEqual(sleeps,[1000,1000]);
+});
