@@ -24,7 +24,7 @@ chrome.runtime.onMessage.addListener((message,sender,respond)=>{
     if(!['load','start'].includes(message.type))throw new Error('Lệnh không hợp lệ.');
     if(job.state.busy)throw new Error('Một tác vụ đang chạy.');
     if(message.type==='start'){
-      if(message.options?.types?.some(t=>['staffGraded','ungradedAssignment','discussionPrompt'].includes(t))){
+      if(message.options?.types?.some(t=>['staffGraded','ungradedAssignment'].includes(t))){
         const ai=message.options.ai;
         if(!ai?.key?.trim()||!ai.model?.trim()||!providers[ai.provider])throw new Error('Nhập API key và model trong Tùy chọn.');
         if(!await chrome.permissions.contains({origins:[providers[ai.provider]]}))throw new Error('Bấm Cho phép kết nối AI trong Tùy chọn.');

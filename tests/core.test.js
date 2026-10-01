@@ -47,6 +47,18 @@ test('runner refreshes locks and verifies completion without repeating failed re
   assert.equal(result.total,3);
   assert.ok(rounds>0);
 });
+test('runner can report a manual item without marking it failed', async () => {
+  const updates=[];
+  const result=await runCourse({
+    scan:async()=>({items:[{id:'d',contentSummary:{typeName:'discussionPrompt'}}],progress:{elements:[{items:{}}]}}),
+    types:new Set(['discussionPrompt']),
+    process:async()=>({status:'manual',message:'Cần trả lời thủ công trên Coursera.'}),
+    onUpdate:update=>updates.push(update)
+  });
+  assert.equal(result.failed,0);
+  assert.equal(result.pending,1);
+  assert.ok(updates.some(update=>update.status==='manual' && /thủ công/.test(update.message)));
+});
 test('stop prevents the next item from being sent', async () => {
   const abort=new AbortController(); const processed=[];
   const scan=async()=>({items:['a','b'].map(id=>({id,contentSummary:{typeName:'supplement'}})),progress:{elements:[{items:{}}]}});

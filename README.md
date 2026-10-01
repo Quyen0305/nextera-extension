@@ -16,13 +16,13 @@ Video hướng dẫn cài đặt và sử dụng Skipera Coursera, dài **5 phú
 
 | Thao tác | Phạm vi xử lý | Yêu cầu AI |
 | --- | --- | --- |
-| **Skip video** | Video bài giảng có loại `lecture` | Không |
+| **Skip video** | Video `lecture`; đồng thời phát hiện `discussionPrompt` và ghi log để trả lời thủ công | Không |
 | **Làm bài tập** | Các mục `ungradedAssignment` và `staffGraded` có dạng câu hỏi được hỗ trợ | Gemini hoặc Perplexity |
 | **Dừng tác vụ** | Ngăn các bước tiếp theo của tác vụ đang chạy | Không |
 
 Popup tự nhận khóa học từ URL dạng `https://www.coursera.org/learn/<slug>/...`. Khi có nhiều tab, có thể chọn lại tại **Tùy chọn → Tab Coursera**. API key được lưu riêng theo nhà cung cấp khi người dùng bấm **Lưu API key**.
 
-**Skip video** gửi sự kiện và dữ liệu tiến độ video theo logic của bản Skipera gốc; không phát toàn bộ video trong trình duyệt. **Làm bài tập** có thể lưu và nộp đáp án lên Coursera, không chỉ tạo gợi ý.
+**Skip video** gửi sự kiện và dữ liệu tiến độ video theo logic của bản Skipera gốc; không phát toàn bộ video trong trình duyệt. Nếu gặp `discussionPrompt`, extension chỉ ghi log **Cần trả lời thủ công trên Coursera**, không gọi AI, không tự nhập và không tự nộp nội dung thảo luận. **Làm bài tập** chỉ xử lý `ungradedAssignment` và `staffGraded`, có thể lưu và nộp đáp án lên Coursera.
 
 ## Yêu cầu môi trường
 
@@ -131,7 +131,7 @@ Worker gọi API duy trì hoạt động mỗi 20 giây trong thời gian tác v
 | [tests/](tests/) | Kiểm thử bằng `node:test` |
 | [VERIFICATION.md](VERIFICATION.md) | Môi trường, kết quả và giới hạn kiểm chứng |
 
-Mã còn giữ các hàm xử lý bài đọc, Coach, widget/LTI và thảo luận từ bản chuyển đổi trước. Hai nút trong giao diện hiện tại không gọi những loại tác vụ này.
+Mã còn giữ một số hàm xử lý bài đọc, Coach, widget/LTI và hàm gửi thảo luận từ bản chuyển đổi trước. Luồng giao diện hiện tại không gọi hàm tự gửi thảo luận; `discussionPrompt` được phát hiện trong **Skip video** và yêu cầu người dùng trả lời thủ công.
 
 ## Quyền và lưu trữ dữ liệu
 
