@@ -1,6 +1,6 @@
 import {parseSlug,extractCourse,completedIds,processBasicItem,runCourse} from './core.js';
 import {createTransport,sleep} from './transport.js';
-import {solveAssessment,solveDiscussion} from './assessment.js';
+import {solveAssessment} from './assessment.js';
 import {createAI} from './llm.js';
 import {materialParams} from './materials.js';
 // The service worker owns this controller, independently of the popup.
@@ -29,7 +29,7 @@ export class JobController {
       signal.throwIfAborted();const done=completedIds(progress);
       this.state.loaded={slug,tabId,userId,courseId:data.courseId,snapshot:{items:data.items,progress}};
       this.state.stats={completed:data.items.filter(i=>done.has(i.id)).length,total:data.items.length};
-      this.state.phase='ready';this.state.message='Chọn Skip video hoặc Làm bài tập. Bài tập cần API key AI.';this.log(`Đã tải ${slug}.`);
+      this.state.phase='ready';this.state.message='Chọn Skip video hoặc Làm bài tập. Thảo luận trong Skip video cần bạn trả lời thủ công; bài tập cần API key AI.';this.log(`Đã tải ${slug}.`);
     }catch(e){this.state.phase=signal.aborted?'stopped':'error';this.state.message=signal.aborted?'Đã dừng tải khóa học.':e.message;this.log(this.state.message);}
     finally{release();this.controller=null;this.state.busy=false;this.emit();}
   }
@@ -53,14 +53,14 @@ export class JobController {
       };
       const process=async item=>{
         const kind=item.contentSummary?.typeName;
-        if(kind==='discussionPrompt')await solveDiscussion(item,ctx);
-        else if(['staffGraded','ungradedAssignment'].includes(kind))await solveAssessment(item,ctx);
+        if(kind==='discussionPrompt')return {status:'manual',message:'Cần trả lời thủ công trên Coursera.'};
+        if(['staffGraded','ungradedAssignment'].includes(kind))await solveAssessment(item,ctx);
         else await processBasicItem(item,ctx);
         await this.wait(800,signal);
       };
       const stats=await runCourse({scan,process,types:new Set(types),signal,onUpdate:update=>{
         if(update.stats)this.state.stats=update.stats;
-        if(update.item){this.state.current=update.item.name||update.item.id;this.log(`${this.state.current}: ${update.status==='running'?'đang xử lý':update.status==='sent'?'đã gửi yêu cầu':update.error}`);}
+        if(update.item){this.state.current=update.item.name||update.item.id;this.log(`${this.state.current}: ${update.status==='running'?'đang xử lý':update.status==='sent'?'đã gửi yêu cầu':update.status==='manual'?(update.message||'cần trả lời thủ công'):update.error}`);}
         this.emit();
       }});
       this.state.phase='done';this.state.current='';this.state.message=`Hoàn tất ${stats.completed}/${stats.total} mục. Còn ${stats.pending} mục; ${stats.failed} mục lỗi.`;
