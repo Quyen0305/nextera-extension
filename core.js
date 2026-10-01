@@ -105,7 +105,7 @@ export async function runCourse({scan,process,types,signal,onUpdate=()=>{}}) {
       signal?.throwIfAborted();
       attempted.add(item.id);
       onUpdate({item,status:'running'});
-      try {await process(item); onUpdate({item,status:'sent'});}
+      try {const result=await process(item); onUpdate({item,status:result?.status||'sent',message:result?.message});}
       catch(error) {
         if(signal?.aborted || error.name==='AbortError') throw error;
         failed.add(item.id); onUpdate({item,status:'error',error:error.message});
