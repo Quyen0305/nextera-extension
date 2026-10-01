@@ -3,7 +3,7 @@ import {providers} from './llm.js';
 const $=id=>document.getElementById(id);
 let state=null,requesting=false,initialized=false;
 const labels={idle:'Sẵn sàng',loading:'Đang tải',ready:'Đã tải',running:'Đang chạy',stopping:'Đang dừng',stopped:'Đã dừng',done:'Đã kết thúc',error:'Có lỗi',interrupted:'Bị gián đoạn'};
-const videoTypes=['lecture'];
+const videoTypes=['lecture','supplement'];
 const assignmentTypes=['ungradedAssignment','staffGraded'];
 async function send(type,options){const response=await chrome.runtime.sendMessage({type,options});if(!response?.ok)throw new Error(response?.error||'Không kết nối được tác vụ nền.');return response.state;}
 function matching(){try{return state?.loaded?.slug===parseSlug($('slug').value)&&state.loaded.tabId===Number($('courseTab').value);}catch{return false;}}
@@ -19,7 +19,7 @@ function render(next=state){
   $('stop').hidden=!state.busy;$('stop').disabled=!state.busy||state.phase==='stopping';
   const snapshot=state.loaded?.snapshot;
   const count=types=>pendingItems(snapshot.items,snapshot.progress,new Set(),new Set(types)).length;
-  $('selected').textContent=snapshot?`${count(videoTypes)} video · ${count(assignmentTypes)} bài tập`:'';
+  $('selected').textContent=snapshot?`${count(videoTypes)} nội dung học · ${count(assignmentTypes)} bài tập`:'';
 }
 async function command(type,options){
   requesting=true;render();
