@@ -20,9 +20,16 @@ export function completedIds(progress) {
   if (!items || typeof items !== 'object' || Array.isArray(items)) throw new Error('Không đọc được tiến độ; đã dừng để tránh xử lý lại.');
   return new Set(Object.entries(items).filter(([,v])=>v?.progressState==='Completed').map(([id])=>id));
 }
+export function itemLocked(item) {
+  return item?.isLocked===true || item?.lockedStatus==='LOCKED';
+}
 export function pendingItems(items, progress, attempted=new Set(), types=new Set()) {
   const done=completedIds(progress);
-  return items.filter(i=>!done.has(i.id) && !i.isLocked && i.lockedStatus!=='LOCKED' && !attempted.has(i.id) && types.has(i.contentSummary?.typeName));
+  return items.filter(i=>!done.has(i.id) && !itemLocked(i) && !attempted.has(i.id) && types.has(i.contentSummary?.typeName));
+}
+export function lockedItems(items, progress, attempted=new Set(), types=new Set()) {
+  const done=completedIds(progress);
+  return items.filter(i=>!done.has(i.id) && itemLocked(i) && !attempted.has(i.id) && types.has(i.contentSummary?.typeName));
 }
 export const answerTypes = {
   MULTIPLE_CHOICE:['multipleChoiceResponse','chosen'], CHECKBOX:['checkboxResponse','chosen'],
@@ -90,8 +97,9 @@ export async function processBasicItem(item, ctx) {
     default: throw new Error('Loại mục chưa hỗ trợ.');
   }
 }
-export async function runCourse({scan,process,types,signal,onUpdate=()=>{}}) {
+export async function runCourse({scan,process,types,signal,onUpdate=()=>{},sleep=ms=>new Promise(r=>setTimeout(r,ms)),waitForUnlockMs=0,unlockPollMs=1000}) {
   const attempted=new Set(),failed=new Set();
+  let waitedForUnlockMs=0;
   while(true) {
     signal?.throwIfAborted();
     const snapshot=await scan();
@@ -100,7 +108,18 @@ export async function runCourse({scan,process,types,signal,onUpdate=()=>{}}) {
     const stats={completed,total:snapshot.items.length,failed:failed.size,pending:snapshot.items.length-completed};
     onUpdate({stats,snapshot});
     const pending=pendingItems(snapshot.items,snapshot.progress,attempted,types);
-    if(!pending.length) return stats;
+    if(!pending.length) {
+      const locked=lockedItems(snapshot.items,snapshot.progress,attempted,types);
+      if(locked.length && waitedForUnlockMs<waitForUnlockMs) {
+        const pause=Math.min(unlockPollMs,waitForUnlockMs-waitedForUnlockMs);
+        onUpdate({item:locked[0],status:'waiting'});
+        await sleep(pause);
+        waitedForUnlockMs+=pause;
+        continue;
+      }
+      return stats;
+    }
+    waitedForUnlockMs=0;
     for(const item of pending) {
       signal?.throwIfAborted();
       attempted.add(item.id);

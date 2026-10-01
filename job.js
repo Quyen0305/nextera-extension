@@ -56,11 +56,12 @@ export class JobController {
         if(kind==='discussionPrompt')await solveDiscussion(item,ctx);
         else if(['staffGraded','ungradedAssignment'].includes(kind))await solveAssessment(item,ctx);
         else await processBasicItem(item,ctx);
-        await this.wait(800,signal);
+        if(!['lecture','supplement'].includes(kind)) await this.wait(800,signal);
       };
-      const stats=await runCourse({scan,process,types:new Set(types),signal,onUpdate:update=>{
+      const skipLearningOnly=types.every(t=>['lecture','supplement'].includes(t));
+      const stats=await runCourse({scan,process,types:new Set(types),signal,sleep:ms=>this.wait(ms,signal),waitForUnlockMs:skipLearningOnly?35000:0,unlockPollMs:1000,onUpdate:update=>{
         if(update.stats)this.state.stats=update.stats;
-        if(update.item){this.state.current=update.item.name||update.item.id;this.log(`${this.state.current}: ${update.status==='running'?'đang xử lý':update.status==='sent'?'đã gửi yêu cầu':update.error}`);}
+        if(update.item){this.state.current=update.item.name||update.item.id;const statusText=update.status==='running'?'đang xử lý':update.status==='sent'?'đã gửi yêu cầu':update.status==='waiting'?'đang chờ Coursera mở khóa':update.error;this.log(this.state.current+': '+statusText);}
         this.emit();
       }});
       this.state.phase='done';this.state.current='';this.state.message=`Hoàn tất ${stats.completed}/${stats.total} mục. Còn ${stats.pending} mục; ${stats.failed} mục lỗi.`;
